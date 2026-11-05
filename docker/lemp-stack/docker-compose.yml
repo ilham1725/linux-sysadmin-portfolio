@@ -1,0 +1,50 @@
+# LEMP stack: Nginx + PHP-FPM + MySQL 8
+# Copy .env.example to .env (or set the variables below) before first run.
+# Usage: docker compose up -d
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lemp-nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./site:/var/www/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+  php:
+    image: php:8.3-fpm-alpine
+    container_name: lemp-php
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./site:/var/www/html
+    # Install the PHP extensions your app needs, e.g.:
+    # command: sh -c "docker-php-ext-install pdo_mysql mysqli && php-fpm"
+
+  mysql:
+    image: mysql:8.0
+    container_name: lemp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-change-me-root}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE:-appdb}"
+      MYSQL_USER: "${MYSQL_USER:-appuser}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-change-me}"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    # Not published by default — reach MySQL from the php container as host "mysql".
+    # Uncomment only if you really need host access, and firewall it:
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:
